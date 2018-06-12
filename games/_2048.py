@@ -7,18 +7,22 @@ RIGHT = 1
 DOWN = 2
 LEFT = 3
 
-class Play():
-    def __init__(self, size):
+class Play2048():
+    def __init__(self, size=4):
         self._size = size
-        self._grid = [([0] * self._size) for _ in range(self._size)]
-        self._score = 0
-        self._available = set(i for i in range(self._size ** 2))
         self._move_func = {
             UP: self._move_up,
             DOWN: self._move_down,
             LEFT: self._move_left,
             RIGHT: self._move_right
         }
+        self._is_terminate = False
+        self._set_game()
+    
+    def _set_game(self):
+        self._grid = [([0] * self._size) for _ in range(self._size)]
+        self._score = 0
+        self._available = set(i for i in range(self._size ** 2))
         self._fill()
         self._fill()
     
@@ -47,7 +51,7 @@ class Play():
         num = 2 if random.random() < 0.9 else 4
         self._grid[idx // self._size][idx % self._size] = num
         self._available.remove(idx)
-        self._check_terminate()
+        self._is_terminate = self._check_terminate()
         
     def _check_terminate(self):
         if len(self._available) != 0:
@@ -56,14 +60,14 @@ class Play():
             for j in range(self._size):
                 if i < self._size-1 and j < self._size-1:
                     if self._grid[i][j] == self._grid[i][j+1] or self._grid[i][j] == self._grid[i+1][j]:
-                        return
+                        return False
                 elif i == self._size-1 and j < self._size-1:
                     if self._grid[i][j] == self._grid[i][j+1]:
-                        return
+                        return False
                 elif i < self._size-1 and j == self._size-1:
                     if self._grid[i][j] == self._grid[i+1][j]:
-                        return
-        self._terminate()
+                        return False
+        return True
         
     def _can_move(self, direction):
         if direction == LEFT:
@@ -187,6 +191,12 @@ class Play():
     
     def score(self):
         return self._score
+    
+    def reset(self):
+        self._set_game()
+        
+    def is_terminate(self):
+        return self._is_terminate
         
     def _terminate(self):
         print('Game Over!\nYour score is ' + str(self._score) + '\n')
