@@ -7,7 +7,7 @@ RIGHT = 1
 DOWN = 2
 LEFT = 3
 
-class Play2048():
+class Play():
     def __init__(self, size):
         self._size = size
         self._grid = [([0] * self._size) for _ in range(self._size)]
