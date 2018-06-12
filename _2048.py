@@ -6,9 +6,6 @@ RIGHT = 1
 DOWN = 2
 LEFT = 3
 
-"""
-
-"""
 class Play2048():
     def __init__(self, size):
         self._size = size
@@ -25,8 +22,8 @@ class Play2048():
     def __str__(self):
         ret = 'Panel:\n' 
         for row in self._grid:
-            ret += ' ' + str(row) + '\n'
-        ret += ('\nScore:\n' + str(self._score) + '\n')
+            ret += ' {}\n'.format(row)
+        ret += ('\nScore:\n{}\n'.format(self._score))
         ret += '\nAvailable Grid:\n'
         if len(self._available) == 0:
             ret += 'None'
@@ -35,7 +32,7 @@ class Play2048():
             for num in self._available:
                 if (prev > -1 and prev // 4 != num // 4):
                     ret += '\n'
-                ret += ('(' + str(num // self._size) + ', ' + str(num % self._size) + ') ')  
+                ret += ('({}, {})'.format(num // self._size, str(num % self._size)))  
                 prev = num
         return ret
     
@@ -113,80 +110,74 @@ class Play2048():
     
     def _move_left(self):
         for i in range(self._size):
-            _before_move = []
+            before_move = []
             for j in range(self._size):
                 if self._grid[i][j] != 0:
-                    _before_move.append(self._grid[i][j])
-            _after_move = self._merge(_before_move)
-            for j in range(len(_after_move)):
+                    before_move.append(self._grid[i][j])
+            after_move = self._merge(before_move)
+            for j in range(len(after_move)):
                 if i * self._size + j in self._available:
                     self._available.remove(i * self._size + j)
-                self._grid[i][j] = _after_move[j]
-            for j in range(len(_after_move), self._size):
+                self._grid[i][j] = after_move[j]
+            for j in range(len(after_move), self._size):
                 if self._grid[i][j] != 0:
                     self._grid[i][j] = 0
                 self._available.add(i * self._size + j)
-        self._fill()
         
     
     def _move_right(self):
         for i in range(self._size):
-            _before_move = []
+            before_move = []
             for j in reversed(range(self._size)):
                 if self._grid[i][j] != 0:
-                    _before_move.append(self._grid[i][j])
-            _after_move = self._merge(_before_move)
-            for j in reversed(range(self._size - len(_after_move), self._size)):
+                    before_move.append(self._grid[i][j])
+            after_move = self._merge(before_move)
+            for j in reversed(range(self._size - len(after_move), self._size)):
                 if i * self._size + j in self._available:
                     self._available.remove(i * self._size + j)
-                self._grid[i][j] = _after_move[self._size-j-1]
-            for j in reversed(range(self._size-len(_after_move))):
+                self._grid[i][j] = after_move[self._size-j-1]
+            for j in reversed(range(self._size-len(after_move))):
                 if self._grid[i][j] != 0:
                     self._grid[i][j] = 0
                 self._available.add(i * self._size + j)
-        self._fill()
     
     def _move_up(self):
         for i in range(self._size):
-            _before_move = []
+            before_move = []
             for j in range(self._size):
                 if self._grid[j][i] != 0:
-                    _before_move.append(self._grid[j][i])
-            _after_move = self._merge(_before_move)
-            for j in range(len(_after_move)):
+                    before_move.append(self._grid[j][i])
+            after_move = self._merge(before_move)
+            for j in range(len(after_move)):
                 if j * self._size + i in self._available:
                     self._available.remove(j * self._size + i)
-                self._grid[j][i] = _after_move[j]
-            for j in range(len(_after_move), self._size):
+                self._grid[j][i] = after_move[j]
+            for j in range(len(after_move), self._size):
                 if self._grid[j][i] != 0:
                     self._grid[j][i] = 0
                 self._available.add(j * self._size + i) 
-        self._fill()
     
     def _move_down(self):
         for i in range(self._size):
-            _before_move = []
+            before_move = []
             for j in reversed(range(self._size)):
                 if self._grid[j][i] != 0:
-                    _before_move.append(self._grid[j][i])  
-            _after_move = self._merge(_before_move)
-            for j in reversed(range(self._size-len(_after_move), self._size)):
+                    before_move.append(self._grid[j][i])  
+            after_move = self._merge(before_move)
+            for j in reversed(range(self._size-len(after_move), self._size)):
                 if j * self._size + i in self._available:
                     self._available.remove(j * self._size + i)
-                self._grid[j][i] = _after_move[self._size-j-1]
+                self._grid[j][i] = after_move[self._size-j-1]
             
-            for j in reversed(range(self._size-len(_after_move))):
+            for j in reversed(range(self._size-len(after_move))):
                 if self._grid[j][i] != 0:
                     self._grid[j][i] = 0
                 self._available.add(j * self._size + i)
-        self._fill()
         
-    """
-        External API to move the panel along 'direction'
-    """
     def move(self, direction):
         if self._can_move(direction):
             self._move_func[direction]()
+            self._fill()
     
     def _terminate(self):
         print('Game Over!\nYour score is ' + str(self._score) + '\n')
