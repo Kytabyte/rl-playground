@@ -1,5 +1,6 @@
 import random
 import sys
+import numpy as np
 
 UP = 0
 RIGHT = 1
@@ -12,10 +13,18 @@ class Play2048():
         self._grid = [([0] * self._size) for _ in range(self._size)]
         self._score = 0
         self._available = set(i for i in range(self._size ** 2))
-        self._move_func = {UP: self._move_up,
-                           DOWN: self._move_down,
-                           LEFT: self._move_left,
-                           RIGHT: self._move_right}
+        self._move_func = {
+            UP: self._move_up,
+            DOWN: self._move_down,
+            LEFT: self._move_left,
+            RIGHT: self._move_right
+        }
+        self._action = {
+            'UP': UP,
+            'RIGHT': RIGHT,
+            'DOWN': DOWN,
+            'LEFT': LEFT,
+        }
         self._fill()
         self._fill()
     
@@ -178,7 +187,16 @@ class Play2048():
         if self._can_move(direction):
             self._move_func[direction]()
             self._fill()
+            
+    def action(self):
+        return self._action
     
+    def status(self):
+        return np.array(self._grid)
+    
+    def score(self):
+        return self._score
+        
     def _terminate(self):
         print('Game Over!\nYour score is ' + str(self._score) + '\n')
         raise Exception()
