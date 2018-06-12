@@ -55,7 +55,7 @@ class Play2048():
         
     def _check_terminate(self):
         if len(self._available) != 0:
-            return
+            return False
         for i in range(self._size):
             for j in range(self._size):
                 if i < self._size-1 and j < self._size-1:
