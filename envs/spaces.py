@@ -10,6 +10,9 @@ class Discrete(object):
     
     def __repr__(self):
         return self.__str__()
+
+    def __len__(self):
+    	return self._size
     
     def sample(self):
         return random.choice(self._sample_space)

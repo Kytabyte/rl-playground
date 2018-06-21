@@ -20,7 +20,10 @@ class Env2048(object):
         return self.player.is_terminate()
     
     def _info(self):
-        return None
+        return {'valid_move': self.player.can_move()}
+
+    def n_obs(self):
+        return self._get_obs().shape
     
     def step(self, action):
         self.player.move(action)
