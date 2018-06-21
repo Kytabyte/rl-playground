@@ -6,7 +6,7 @@
 
 ## Structure
 
-`games` contains the code for playing the game
+[`games`](https://github.com/Kytabyte/rl-playground/tree/master/games) contains the logic for playing a game
 
 `envs` contains the environment of each game, where an agent can get observation, reward, and take actions through API in this folder
 
