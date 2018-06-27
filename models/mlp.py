@@ -5,10 +5,10 @@ class MLP(nn.Module):
     def __init__(self, n_input, n_output, hidden=(128,), endswith=None):
         super(MLP, self).__init__()
         self.layers = nn.Sequential(
-            *self._buildnet(n_input, n_output, hidden)
+            *self._buildnet(n_input, n_output, hidden, endswith)
         )
         
-    def _buildnet(self, n_input, n_output, hidden):
+    def _buildnet(self, n_input, n_output, hidden, endswith):
         if len(hidden) == 0:
             return [nn.Linear(n_input, n_output)]
 
