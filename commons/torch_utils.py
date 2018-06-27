@@ -32,8 +32,26 @@ def astensor(obj, to_type=None):
 			)
 
 def copynet(network):
+	"""
+		a deepcopy of a network 
+	"""
 	if not isinstance(network, nn.Module):
 		raise TypeError('Input must be a instance of {}, but got {}'.format(nn.Module, network.__class__.__name__))
 
 	return copy.deepcopy(network)
+
+def flatten(network, input_size):
+	"""
+		return the number of features after applying `network`structure on a network with shape `input_size`
+	"""
+	if not isinstance(network, nn.Module):
+		network = nn.Sequential(
+			*network
+		)
+
+	with torch.no_grad():
+		vector = torch.rand((1, *input_size))
+		num_features = network(vector).view(1, -1).size(1)
+
+	return num_features
 
