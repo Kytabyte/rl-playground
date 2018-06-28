@@ -50,8 +50,7 @@ def flatten(network, input_size):
 		)
 
 	with torch.no_grad():
-		vector = torch.rand((1, *input_size))
-		num_features = network(vector).view(1, -1).size(1)
+		num_features = network(torch.rand((1, *input_size))).view(1, -1).size(1)
 
 	return num_features
 
