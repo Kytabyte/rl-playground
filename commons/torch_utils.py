@@ -2,7 +2,7 @@ import copy
 
 import torch
 import torch.nn as nn
-from . import torch_constants as const
+from . import constants as const
 
 def astensor(obj, to_type=None):
 	"""
