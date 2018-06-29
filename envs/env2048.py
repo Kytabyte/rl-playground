@@ -23,7 +23,7 @@ class Env2048(object):
         return {'valid_move': self.player.can_move()}
 
     def n_obs(self):
-        return self._get_obs().shape
+        return self._get_obs().shape[0] * self._get_obs().shape[1]
     
     def step(self, action):
         self.player.move(action)
