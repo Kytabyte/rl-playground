@@ -1,5 +1,4 @@
 import random
-import sys
 import numpy as np
 
 UP = 0
