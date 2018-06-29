@@ -1,6 +1,6 @@
 from functools import reduce
 
-from networks.mlp import MLP
+from models.mlp import MLP
 from envs.env2048 import Env2048
 from rl.qlearning import QNet
 from rl.utils import ReplayBuffer
@@ -13,7 +13,7 @@ import torch.optim as optim
 #### Constants
 
 env = Env2048()
-n_obs, n_act = reduce(lambda x, y: x * y, env.n_obs()), len(env.action_space)
+n_obs, n_act = env.n_obs(), len(env.action_space)
 
 net = MLP(n_obs, n_act, hidden=(128,128))
 qnet = QNet(net, n_obs, n_act, target=True)
