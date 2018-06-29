@@ -18,7 +18,7 @@ class MLP(nn.Module):
         net.append(nn.Linear(hidden[-1], n_output))
         
         if endswith:
-            net.append(endswith())
+            net.append(endswith)
         
         return net
         
