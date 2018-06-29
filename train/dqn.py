@@ -55,7 +55,7 @@ for i_episode in range(n_episode):
         obs = next_obs
         
         if len(replay_buffer) > batch_size:
-            obses, actions, next_obses, rewards, dones = tuple(replay_buffer.sample(batch_size))
+            obses, actions, next_obses, rewards, dones = replay_buffer.sample(batch_size)
             obses = np.array(obses).reshape((batch_size, -1))
             next_obses = np.array(next_obses).reshape((batch_size, -1))
             qnet.learn((obses, actions, next_obses, rewards, dones), optimizer, loss_fn)

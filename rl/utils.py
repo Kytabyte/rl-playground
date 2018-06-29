@@ -21,4 +21,4 @@ class ReplayBuffer():
     
     def sample(self, n_sample):
         samples = random.sample(self._buffer, n_sample)
-        return zip(*samples)
+        return list(zip(*samples))
