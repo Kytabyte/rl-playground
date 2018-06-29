@@ -186,7 +186,7 @@ class Play2048():
             self._fill()
 
     def can_move(self):
-        return [self._can_move(direction) for direction in self._move_func]
+        return [self._can_move(direction) for direction in sorted(self._move_func.keys())]
     
     def status(self):
         return np.array(self._grid)
