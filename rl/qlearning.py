@@ -2,79 +2,89 @@ import random
 
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 from commons.torch_utils import astensor, copynet
+from .utils import ReplayBuffer
 
-class QNet():
-    def __init__(self, net, n_obs, n_act, target=False):
-        self._net = net
-        self._tnet = copynet(net) if target else None
-        
-        self._n_obs, self._n_act = n_obs, n_act
-
-    def parameters(self):
-    	return self._net.parameters()
+class QNet(object):
+  def __init__(self, net, obs_shape, n_act, buffer_size=1000, target=False):
+    self._net = net
+    self._tnet = copynet(net) if target else None
     
-    def forward(self, obs):
-        if not isinstance(obs, torch.Tensor):
-            obs = astensor(obs, 'float')
-        
-        return self._net(obs)
+    self._obs_shape, self._n_act = obs_shape, n_act
+    self.replay_buffer = ReplayBuffer(buffer_size)
+
+  def push_buffer(self, sample):
+    assert len(sample) == 5
+    self.replay_buffer.push(sample)
+
+  def parameters(self):
+    return self._net.parameters()
+  
+  def forward(self, obs, tnet=True):
+    if not isinstance(obs, torch.Tensor):
+      obs = astensor(obs, 'float')
+
+    obs = obs.reshape(obs.size(0), *self._obs_shape)
     
-    def learn(self, samples, optim, loss_fn, gamma=0.95):
-        assert len(samples) == 5
-        
-        obs, act, next_obs, reward, done = samples
-
-        if not isinstance(obs, torch.Tensor):
-        	obs = astensor(obs, 'float')
-
-        if not isinstance(act, torch.Tensor):
-        	act = astensor(act, 'long')
-
-        if not isinstance(next_obs, torch.Tensor):
-        	next_obs = astensor(next_obs, 'float')
-
-        if not isinstance(reward, torch.Tensor):
-        	reward = astensor(reward, 'float')
-
-        if not isinstance(done, torch.Tensor):
-        	done = astensor(done, 'float')
-        
-        qval = self._net(obs)
-        
-        if self._tnet:
-            opt_qval = self._tnet(next_obs).detach()
-        else:
-            opt_qval = self._net(next_obs).detach()
-        
-        qval = qval.gather(1, act.unsqueeze(1)).squeeze(1)
-        opt_qval = opt_qval.max(1)[0]
-        exp_qval = reward + gamma * opt_qval * (1 - done)
-        
-        loss = loss_fn(qval, exp_qval)
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
+    if self._tnet or tnet:
+      return self._tnet(obs)
+    return self._net(obs)
+  
+  def learn(self, batch_size, optimizer=None, loss_fn=None, gamma=0.95):
+    if len(self.replay_buffer) < batch_size:
+      return
     
-    def act(self, obs, act_mask=None, eps=0.2):
-        act_mask = astensor(act_mask) if act_mask is not None else astensor([1] * self._n_act, 'byte')
-        
-        if random.random() < eps:
-        	valid_move = astensor(range(self._n_act), 'int').masked_select(act_mask)
-        	action = valid_move[random.randrange(len(valid_move))].item()
-        else:
-        	with torch.no_grad():
-        		val = self.forward(obs)
-
-        		# This is quite dangerous but we know what we are doing here
-        		maxval = val.masked_select(act_mask.unsqueeze(0)).argmax()
-        		action = maxval.item()
-        
-        return action
+    obs, act, next_obs, reward, done = self.replay_buffer.sample(batch_size)
     
-    def update_tnet(self):
-        if self._tnet:
-            self._tnet.load_state_dict(self._net.state_dict())
-        else:
-            print('You did not initialize target network, please check your network structure.')
+    obs = astensor(obs, 'float')
+    act = astensor(act, 'long')
+    next_obs = astensor(next_obs, 'float')
+    reward = astensor(reward, 'float')
+    done = astensor(done, 'float')
+    
+    qval = self.forward(obs, tnet=False)
+    with torch.no_grad():
+      opt_qval = self.forward(next_obs)
+    
+    qval = qval.gather(1, act.unsqueeze(1)).squeeze(1)
+    opt_qval = opt_qval.max(1)[0]
+    exp_qval = reward + gamma * opt_qval * (1 - done)
+    
+    if optimizer is None:
+      optimizer = optim.Adam(self.parameters())
+
+    if loss_fn is None:
+      loss_fn = nn.MSELoss()
+
+    if optimizer is None:
+      optimizer = optim.Adam(self.parameters())
+
+    loss = loss_fn(qval, exp_qval)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+  
+  def act(self, obs, act_mask=None, eps=0.2):
+    act_mask = astensor(act_mask) if act_mask is not None else astensor([1] * self._n_act, 'byte')
+    
+    if random.random() < eps:
+      valid_move = astensor(range(self._n_act), 'int').masked_select(act_mask)
+      action = valid_move[random.randrange(len(valid_move))].item()
+    else:
+      with torch.no_grad():
+        val = self.forward(obs)
+
+        # This is quite dangerous but we know what we are doing here
+        maxval = val.masked_select(act_mask.unsqueeze(0)).argmax()
+        action = maxval.item()
+    
+    return action
+  
+  def update_tnet(self, soft_tau=1e-2):
+    if self._tnet:
+      for target_param, param in zip(self._tnet.parameters(), self._net.parameters()):
+        target_param.data.copy_(target_param.data * (1 - soft_tau) + param.data * soft_tau)
+    else:
+      print('You did not initialize target network, please check your network structure.')

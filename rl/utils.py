@@ -1,4 +1,6 @@
 import random
+import numpy as np
+import torch 
 
 class ReplayBuffer():
     def __init__(self, size):
@@ -21,4 +23,5 @@ class ReplayBuffer():
     
     def sample(self, n_sample):
         samples = random.sample(self._buffer, n_sample)
-        return list(zip(*samples))
+        samples = list(map(np.array ,zip(*samples)))
+        return samples

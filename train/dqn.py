@@ -1,9 +1,6 @@
-from functools import reduce
-
-from models.mlp import MLP
-from envs.env2048 import Env2048
-from rl.qlearning import QNet
-from rl.utils import ReplayBuffer
+from models import MLP
+from envs import Env2048
+from rl import QNet
 
 import numpy as np
 import torch
@@ -13,17 +10,15 @@ import torch.optim as optim
 #### Constants
 
 env = Env2048()
-n_obs, n_act = env.n_obs(), len(env.action_space)
+n_obs, n_act = env.observation_space.shape[0], env.action_space.n
 
 net = MLP(n_obs, n_act, hidden=(128,128))
-qnet = QNet(net, n_obs, n_act, target=True)
+qnet = QNet(net, (n_obs, ), n_act, target=True)
 
 print(qnet._net)
 
 replay_size = 5000
 batch_size = 256
-
-replay_buffer = ReplayBuffer(replay_size)
 
 n_episode = 20
 update_target_freq=2
@@ -43,25 +38,18 @@ for i_episode in range(n_episode):
     valid_move = None
 
     for t in range(2000):
-        if t % 50 == 0:
-            print(obs)
-
-        action = qnet.act(obs.flatten(), act_mask=valid_move, eps=eps(i_episode * 200 + t))
+        action = qnet.act(obs.reshape(1,-1), act_mask=None, eps=eps(i_episode * 200 + t))
         next_obs, reward, done, info = env.step(action)
         valid_move = info.get('valid_move', None)
 
-        replay_buffer.push((obs, action, next_obs, reward, int(done)))
+        qnet.push_buffer((obs, action, next_obs, reward, int(done)))
             
         obs = next_obs
         
-        if len(replay_buffer) > batch_size:
-            obses, actions, next_obses, rewards, dones = replay_buffer.sample(batch_size)
-            obses = np.array(obses).reshape((batch_size, -1))
-            next_obses = np.array(next_obses).reshape((batch_size, -1))
-            qnet.learn((obses, actions, next_obses, rewards, dones), optimizer, loss_fn)
+        qnet.learn(batch_size, optimizer, loss_fn)
 
         if done:
-            print(obs)
+            print(obs.reshape(4,4))
             print("Episode finished after {} timesteps".format(t+1))
             break
 

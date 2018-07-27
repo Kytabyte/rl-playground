@@ -22,8 +22,7 @@ class ConvNet(nn.Module):
             nn.Linear(flatten(conv_layers, input_size), 4096),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.Softmax(dim=1)
+            nn.Linear(4096, 4096)
         )
         
         net = ConvNet(conv_layers, fc_layers)
