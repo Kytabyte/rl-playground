@@ -1,22 +1,21 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import gym
 
 from rl import PolicyNet
 from models import MLP
-from envs import Env2048
 
-env = Env2048()
+env = gym.make('2048-v0')
 n_obs, n_act = env.observation_space.shape[0], env.action_space.n
 n_episode = 20
 
-model = MLP(n_input=n_obs, n_output=n_act, endswith=nn.Softmax(dim=0))
+model = MLP(n_input=n_obs, n_output=n_act)
 net = PolicyNet(net=model,obs_shape=(n_obs, ), n_act=n_act)
 optimizer = optim.Adam(net.parameters(), lr=1e-2)
 
 
 from itertools import count
-
 
 for i_eps in count(1):
   obs = env.reset()

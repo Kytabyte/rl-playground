@@ -1,3 +1,3 @@
-from games._2048 import Play2048
+from games._2048 import *
 
 __all__ = ['Play2048']

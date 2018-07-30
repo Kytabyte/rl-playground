@@ -10,8 +10,12 @@ from .utils import ReplayBuffer
 class QNet(object):
   def __init__(self, net, obs_shape, n_act, buffer_size=1000, target=False):
     self._net = net
-    self._tnet = copynet(net) if target else None
-    
+    if target:
+      self._tnet = copynet(self._net)
+      self._tnet.load_state_dict(self._net.state_dict())
+    else:
+      self._tnet = None
+
     self._obs_shape, self._n_act = obs_shape, n_act
     self.replay_buffer = ReplayBuffer(buffer_size)
 
@@ -21,37 +25,37 @@ class QNet(object):
 
   def parameters(self):
     return self._net.parameters()
-  
+
   def forward(self, obs, tnet=True):
     if not isinstance(obs, torch.Tensor):
       obs = astensor(obs, 'float')
 
     obs = obs.reshape(obs.size(0), *self._obs_shape)
-    
-    if self._tnet or tnet:
+
+    if self._tnet and tnet:
       return self._tnet(obs)
     return self._net(obs)
-  
+
   def learn(self, batch_size, optimizer=None, loss_fn=None, gamma=0.95):
     if len(self.replay_buffer) < batch_size:
       return
-    
+
     obs, act, next_obs, reward, done = self.replay_buffer.sample(batch_size)
-    
+
     obs = astensor(obs, 'float')
     act = astensor(act, 'long')
     next_obs = astensor(next_obs, 'float')
     reward = astensor(reward, 'float')
     done = astensor(done, 'float')
-    
+
     qval = self.forward(obs, tnet=False)
     with torch.no_grad():
       opt_qval = self.forward(next_obs)
-    
+
     qval = qval.gather(1, act.unsqueeze(1)).squeeze(1)
     opt_qval = opt_qval.max(1)[0]
     exp_qval = reward + gamma * opt_qval * (1 - done)
-    
+
     if optimizer is None:
       optimizer = optim.Adam(self.parameters())
 
