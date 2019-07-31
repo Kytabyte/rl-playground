@@ -103,7 +103,7 @@ class Play2048():
         
         after_move = []
         i = 0     
-        while i < len(before_move):   
+        while i < len(before_move):
             if i < len(before_move)-1 and before_move[i] == before_move[i+1]:
                 after_move.append(before_move[i] * 2)
                 self._score += (before_move[i] * 2)

@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 
+from typing import Tuple
+
 class ConvNet(nn.Module):
-    """
-        Examples to use ConvNet:
+    """ Examples to use ConvNet:
         
         from commons.torch_utils import flatten
         
@@ -26,22 +27,21 @@ class ConvNet(nn.Module):
         )
         
         net = ConvNet(conv_layers, fc_layers)
-        
     """
+
     def __init__(self, conv, fc):
         super(ConvNet, self).__init__()
-        
-        self._conv =self._conv = nn.Sequential(
+
+        self._conv = self._conv = nn.Sequential(
             *conv
         )
         self._fc = self._fc = nn.Sequential(
             *fc
         )
-        
+
     def forward(self, x):
         x = self._conv(x)
         x = x.view((x.size(0), -1))
         x = self._fc(x)
-        
-        return x
 
+        return x
