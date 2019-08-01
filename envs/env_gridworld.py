@@ -25,10 +25,12 @@ Construct a simple maze MDP
 """
 
 import numpy as np
+import torch
+
 
 def make_env():
     # Transition function: |A| x |S| x |S'| array
-    T = np.zeros([4, 17, 17])
+    T = np.zeros([4, 17, 17], dtype=np.float32)
     a = 0.8  # intended move
     b = 0.1  # lateral move
 
@@ -287,14 +289,14 @@ def make_env():
     T[3, 16, 16] = 1 
 
     # Reward function: |A| x |S| array
-    R = -1 * np.ones([4, 17]) 
+    R = -1 * np.ones([4, 17], dtype=np.float32)
 
     # set rewards
     R[:, 15] = 100   # goal state
     R[:, 9] = -70   # bad state
     R[:, 16] = 0   # end state
 
-    return T.swapaxes(0, 1), R.T
+    return torch.from_numpy(T.swapaxes(0, 1)), torch.from_numpy(R.T)
 
 
 transtions, rewards = make_env()

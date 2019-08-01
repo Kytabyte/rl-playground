@@ -1,6 +1,6 @@
 from typing import List
 
-import numpy as np
+import torch
 
 
 class ObservableEnv:
@@ -9,8 +9,8 @@ class ObservableEnv:
     def __init__(self,
                  states: List[str],
                  actions: List[str],
-                 transitions: np.ndarray,
-                 rewards: np.ndarray):
+                 transitions: torch.Tensor,
+                 rewards: torch.Tensor):
         """
         """
         self._check_valid_input(states, actions, transitions, rewards)
@@ -23,8 +23,8 @@ class ObservableEnv:
     @staticmethod
     def _check_valid_input(states, actions, transitions, rewards):
         n_states, n_actions = len(states), len(actions)
-        assert transitions.shape == (n_states, n_actions, n_states)
-        assert rewards.shape == (n_states, n_actions)
+        assert transitions.size() == (n_states, n_actions, n_states)
+        assert rewards.size() == (n_states, n_actions)
 
     @property
     def states(self):
