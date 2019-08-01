@@ -55,9 +55,9 @@ class ValueIteration(_BaseMDP):
 
     def step(self) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         self._old_values = self._values
+        rewards, transitions = self._env.rewards, self._env.transitions
 
-        next_values = self._env.rewards + self._gamma * torch.sum(self._env.transitions * self._old_values, dim=2)
-        self._values, self._pi = torch.max(next_values, dim=1)
+        self._values, self._pi = torch.max(rewards + self._gamma * torch.sum(transitions * self._old_values, 2), 1)
         return self._values, self._pi
 
     def converge(self) -> bool:
@@ -76,18 +76,21 @@ class PolicyIteration(_BaseMDP):
 
     def step(self) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         self._old_values, self._old_pi = self._values, self._pi
+        rewards, transitions = self._env.rewards, self._env.transitions
 
-        self._values = torch.empty_like(self._old_values)
-        for state, policy in enumerate(self._old_pi):
-            self._values[state] = self._env.rewards[state, policy] + self._gamma * torch.sum(
-                self._env.transitions[state, policy, :] * self._old_values)
-        self._pi = torch.argmax(self._env.rewards + self._gamma * torch.sum(self._env.transitions * self._values, dim=2), dim=1)
+        self._old_pi.unsqueeze_(1)
+        self._values = rewards.gather(1, self._old_pi) + self._gamma * torch.sum(
+            transitions * self._old_values, 2).gather(1, self._old_pi)
+        self._old_pi.squeeze_()
+        self._values.squeeze_()
+
+        self._pi = torch.argmax(rewards + self._gamma * torch.sum(transitions * self._values, 2), 1)
         return self._values, self._pi
 
     def converge(self) -> bool:
         if self._old_pi is None:
             return False
-        return torch.all(self._old_pi == self._pi)
+        return bool(torch.all(self._old_pi == self._pi))
 
 
 class ModifiedPolicyIteration(_BaseMDP):
@@ -102,15 +105,17 @@ class ModifiedPolicyIteration(_BaseMDP):
 
     def step(self) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         self._old_values, self._old_pi = self._values, self._pi
+        rewards, transitions = self._env.rewards, self._env.transitions
 
-        self._values = torch.empty_like(self._old_values)
+        self._old_pi.unsqueeze_(1)
         for _ in range(self._n_evals):
-            for state, policy in enumerate(self._old_pi):
-                self._values[state] = self._env.rewards[state, policy] + self._gamma * torch.sum(
-                    self._env.transitions[state, policy, :] * self._old_values)
-            self._old_values = self._values
-        next_values = self._env.rewards + self._gamma * torch.sum(self._env.transitions * self._values, dim=2)
-        self._values, self._pi = torch.max(next_values, dim=1)
+            self._values = rewards.gather(1, self._old_pi) + self._gamma * torch.sum(
+                transitions * self._values, 2).gather(1, self._old_pi)
+            self._values.squeeze_()
+        self._old_pi.squeeze_()
+        self._values.squeeze_()
+
+        self._values, self._pi = torch.max(rewards + self._gamma * torch.sum(transitions * self._values, 2), 1)
         return self._values, self._pi
 
     def converge(self) -> bool:
