@@ -25,9 +25,8 @@ Construct a simple maze MDP
 """
 
 import random
-import torch.distributions as distributions
 import gym
-from typing import Optional, Tuple
+from typing import Tuple
 
 import games.gridworld as gridworld
 
