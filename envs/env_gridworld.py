@@ -37,14 +37,13 @@ class EnvGridWorld(gym.Env):
     The environment of GridWorld from CS885 course at University of Waterloo
     """
     def __init__(self, a: float = 0.8, b: float = 0.1, terminate: Optional[int] = 100):
-        self._transition, self._reward = gridworld.make_env(a, b)
-        self._n_states, self._n_actions = self._transition.size(0), self._transition.size(1)
+        self._game = gridworld.GridWorld(a, b)
         self._state = -1
         self._count = -1 if terminate is None else terminate
         self._terminate = terminate
 
     def reset(self) -> None:
-        self._state = random.randint(0, self._n_states - 1)
+        self._state = random.randint(0, self._game.N_STATES - 1)
         self._count = 0
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
@@ -53,13 +52,10 @@ class EnvGridWorld(gym.Env):
         if self._count > 0:
             self._count += 1
 
-        probs = self._transition[self._state, action]
-        next_state = distributions.Categorical(probs).sample().item()
-        state, self._state = self._state, next_state
-        reward = self._reward[state, action]
+        self._state, reward = self._game.move(self._state, action)
         done = False if self._terminate is None else self._count == self._terminate
 
-        return next_state, reward, done, {}
+        return self._state, reward, done, {}
 
     def render(self, mode='human'):
         return self._state

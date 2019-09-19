@@ -1,4 +1,7 @@
 """
+This file is copied and modified from the CS885 course at the University of Waterloo offered at Spring 2018
+Website: https://cs.uwaterloo.ca/~ppoupart/teaching/cs885-spring18/assignments/asst1/TestMDPmaze.py
+
 Construct a simple maze MDP
 
   Grid world layout:
@@ -24,10 +27,31 @@ Construct a simple maze MDP
   and 4 actions (up, down, left, right).
 """
 
+from typing import Tuple
 import torch
+import torch.distributions as distributions
+
+UP = 0
+DOWN = 1
+LEFT = 2
+RIGHT = 3
 
 
-def make_env(a:float = 0.8, b:float = 0.1):
+class GridWorld:
+    N_STATES = 17
+    N_ACTIONS = 4
+
+    def __init__(self, a: float = 0.8, b: float = 0.1):
+        self._transition, self._reward = make_env(a, b)
+
+    def move(self, state: int, action: int) -> Tuple[int, float]:
+        probs = self._transition[state, action]
+        next_state = distributions.Categorical(probs).sample().item()
+        reward = self._reward[state, action].item()
+        return next_state, reward
+
+
+def make_env(a: float = 0.8, b: float = 0.1):
     # Transition function: |A| x |S| x |S'| array
     T = torch.zeros((4, 17, 17), dtype=torch.float32)
 
