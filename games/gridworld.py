@@ -44,11 +44,12 @@ class GridWorld:
     def __init__(self, a: float = 0.8, b: float = 0.1):
         self._transition, self._reward = make_env(a, b)
 
-    def move(self, state: int, action: int) -> Tuple[int, float]:
+    def move(self, state: int, action: int) -> Tuple[int, float, bool]:
         probs = self._transition[state, action]
         next_state = distributions.Categorical(probs).sample().item()
         reward = self._reward[state, action].item()
-        return next_state, reward
+        done = next_state == 16
+        return next_state, reward, done
 
 
 def make_env(a: float = 0.8, b: float = 0.1):

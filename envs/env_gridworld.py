@@ -36,25 +36,21 @@ class EnvGridWorld(gym.Env):
     """
     The environment of GridWorld from CS885 course at University of Waterloo
     """
-    def __init__(self, a: float = 0.8, b: float = 0.1, terminate: Optional[int] = 100):
+    def __init__(self, a: float = 0.8, b: float = 0.1):
         self._game = gridworld.GridWorld(a, b)
         self._state = -1
-        self._count = -1 if terminate is None else terminate
-        self._terminate = terminate
+        self._terminate = False
 
     def reset(self) -> None:
         self._state = random.randint(0, self._game.N_STATES - 1)
-        self._count = 0
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         if self._state < 0:
             raise Exception("You need to call reset first before calling step")
-        if self._count > 0:
-            self._count += 1
+        if self._terminate:
+            raise Exception("You need to call reset because the game is terminated")
 
-        self._state, reward = self._game.move(self._state, action)
-        done = False if self._terminate is None else self._count == self._terminate
-
+        self._state, reward, done = self._game.move(self._state, action)
         return self._state, reward, done, {}
 
     def render(self, mode='human'):
