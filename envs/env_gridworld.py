@@ -40,8 +40,19 @@ class EnvGridWorld(gym.Env):
         self._state = -1
         self._terminate = False
 
-    def reset(self) -> None:
-        self._state = random.randint(0, self._game.N_STATES - 1)
+    def n_states(self):
+        return self._game.N_STATES
+
+    def n_actions(self):
+        return self._game.N_ACTIONS
+
+    @property
+    def state(self):
+        return self._state
+
+    def reset(self) -> int:
+        self._state = 0
+        return self._state
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         if self._state < 0:
