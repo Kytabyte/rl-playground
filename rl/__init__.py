@@ -3,4 +3,4 @@ from rl.policygrad import *
 
 from . import mdp
 
-__all__ = ['QNet', 'PolicyNet', 'ActorCritic', 'A2C', 'mdp']
+__all__ = ['PolicyNet', 'ActorCritic', 'A2C', 'mdp']

@@ -1,94 +1,86 @@
+import math
 import random
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+import torch.nn.functional as F
+from commons.torch_utils import copynet
+from .utils import DotDict
 
-from commons.torch_utils import astensor, copynet
-from .utils import ReplayBuffer
+epsilon_start = 1
+epsilon_end = 0.01
+epsilon_decay = 5000
 
-class QNet(object):
-  def __init__(self, net, obs_shape, n_act, buffer_size=1000, target=False):
-    self._net = net
-    if target:
-      self._tnet = copynet(self._net)
-      self._tnet.load_state_dict(self._net.state_dict())
-    else:
-      self._tnet = None
 
-    self._obs_shape, self._n_act = obs_shape, n_act
-    self.replay_buffer = ReplayBuffer(buffer_size)
+def epsilon_by_frame(frame):
+    epsilon_end + (epsilon_start - epsilon_end) * math.exp(-1 * frame / epsilon_decay)
 
-  def push_buffer(self, sample):
-    assert len(sample) == 5
-    self.replay_buffer.push(sample)
 
-  def parameters(self):
-    return self._net.parameters()
+class DQNAgent():
+    def __init__(self, config):
+        config = DotDict(**config)
+        self.env = config.env
+        self.nn = config.nn
+        self.target_nn = copynet(self.nn)
+        self.target_nn.load_state_dict(self.nn.state_dict())
+        self.optim = config.optim
+        self._config = config
 
-  def forward(self, obs, tnet=True):
-    if not isinstance(obs, torch.Tensor):
-      obs = astensor(obs, 'float')
+        self.frame = 0
+        self.episode = 0
 
-    obs = obs.reshape(obs.size(0), *self._obs_shape)
+        self.ep_rewards = [0]
 
-    if self._tnet and tnet:
-      return self._tnet(obs)
-    return self._net(obs)
+        self._state = None
 
-  def learn(self, batch_size, optimizer=None, loss_fn=None, gamma=0.95):
-    if len(self.replay_buffer) < batch_size:
-      return
+    def step(self):
+        state = self.env.env.state
+        self._state = torch.Tensor(state)
+        qval = self.nn(self._state).detach()
+        action = self.env.action_space.sample() if random.random() < epsilon_by_frame(
+            self.frame) or self.frame < self._config.exploration_steps else torch.argmax(qval).item()
+        next_state, reward, done, info = self.env.step(action)
+        #         print(done)
+        self.ep_rewards[-1] += 1
+        self._config.replay_buffer.push([torch.Tensor(state),
+                                         torch.tensor(action),
+                                         torch.Tensor(next_state),
+                                         torch.tensor(reward),
+                                         torch.tensor(done)])
+        if done:
+            print(f'episode {self.episode}, reward {self.ep_rewards[-1]}')
+            self.ep_rewards.append(0)
+            self.episode += 1
+            self.env.reset()
 
-    obs, act, next_obs, reward, done = self.replay_buffer.sample(batch_size)
+    def learn(self):
+        if self.frame < self._config.exploration_steps:
+            return
 
-    obs = astensor(obs, 'float')
-    act = astensor(act, 'long')
-    next_obs = astensor(next_obs, 'float')
-    reward = astensor(reward, 'float')
-    done = astensor(done, 'float')
+        states, actions, next_states, rewards, dones = self._config.replay_buffer.sample(self._config.batch_size)
 
-    qval = self.forward(obs, tnet=False)
-    with torch.no_grad():
-      opt_qval = self.forward(next_obs)
+        qval = self.nn(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        with torch.no_grad():
+            exp_qval = self.target_nn(next_states).max(1)[0]
+        #         print(exp_qval)
+        #         print(self._config.gamma)
+        target = rewards + self._config.gamma * exp_qval * (1 - dones.float())
 
-    qval = qval.gather(1, act.unsqueeze(1)).squeeze(1)
-    opt_qval = opt_qval.max(1)[0]
-    exp_qval = reward + gamma * opt_qval * (1 - done)
+        loss = F.mse_loss(qval, target)
 
-    if optimizer is None:
-      optimizer = optim.Adam(self.parameters())
+        self.optim.zero_grad()
+        loss.backward()
+        self.optim.step()
 
-    if loss_fn is None:
-      loss_fn = nn.MSELoss()
+    def run(self, n_frames, cur_frame=0):
+        self.frame = cur_frame
+        self._state = self.env.reset()
+        for _ in range(n_frames):
+            self.step()
+            self.frame += 1
+            self.learn()
+            if self.frame % self._config.update_target == 0:
+                self.target_nn.load_state_dict(self.nn.state_dict())
 
-    if optimizer is None:
-      optimizer = optim.Adam(self.parameters())
-
-    loss = loss_fn(qval, exp_qval)
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-  
-  def act(self, obs, act_mask=None, eps=0.2):
-    act_mask = astensor(act_mask) if act_mask is not None else astensor([1] * self._n_act, 'byte')
-    
-    if random.random() < eps:
-      valid_move = astensor(range(self._n_act), 'int').masked_select(act_mask)
-      action = valid_move[random.randrange(len(valid_move))].item()
-    else:
-      with torch.no_grad():
-        val = self.forward(obs)
-
-        # This is quite dangerous but we know what we are doing here
-        maxval = val.masked_select(act_mask.unsqueeze(0)).argmax()
-        action = maxval.item()
-    
-    return action
-  
-  def update_tnet(self, soft_tau=1e-2):
-    if self._tnet:
-      for target_param, param in zip(self._tnet.parameters(), self._net.parameters()):
-        target_param.data.copy_(target_param.data * (1 - soft_tau) + param.data * soft_tau)
-    else:
-      print('You did not initialize target network, please check your network structure.')
+            if len(self.ep_rewards) >= 100 and sum(self.ep_rewards) / len(self.ep_rewards) >= 195:
+                print('Solved')
+                break
